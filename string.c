@@ -1,68 +1,114 @@
 #include "main.h"
 
 /**
- * check_match - checks if a character matches any in a string
- * @c: character to check
- * @str: string to check
- *
- * Return: 1 if match, 0 if not
+ * _strdup - returns a pointer to a newly allocated space in memory, which
+ * contains a copy of the string given as a parameter
+ * @str: pointer to a string
+ * Return: pointer to a string
  */
-
-unsigned int check_match(char c, const char *str)
+char *_strdup(char *str)
 {
-	unsigned int i;
+	int i, l;
+	char *new;
 
-	for (i = 0; str[i] != '\0'; i++)
+	if (!str)
 	{
-		if (c == str[i])
-			return (1);
+		return (NULL);
 	}
-	return (0);
+	for (l = 0; str[l] != '\0';)
+	{
+		l++;
+	}
+	new = malloc(sizeof(char) * l + 1);
+	if (!new)
+	{
+		return (NULL);
+	}
+	for (i = 0; i < l; i++)
+	{
+		new[i] = str[i];
+	}
+	new[l] = str[l];
+	return (new);
 }
 
 /**
- * new_strtok - custom strtok
- * @str: string to tokenize
- * @delim: delimiter to tokenize against
- *
- * Return: pointer to the next token or NULL
+ * concat_all - concats 3 strings in a newly allocated memory
+ * @name: first string
+ * @sep: second string
+ * @value: Third string
+ * Return: pointer to the new string
  */
-char *new_strtok(char *str, const char *delim)
+char *concat_all(char *name, char *sep, char *value)
 {
-	static char *token_start;
-	static char *next_token;
-	unsigned int i;
+	char *result;
+	int l1, l2, l3, i, k;
 
-	if (str != NULL)
-		next_token = str;
-	token_start = next_token;
-	if (token_start == NULL)
+	l1 = _strlen(name);
+	l2 = _strlen(sep);
+	l3 = _strlen(value);
+
+	result = malloc(l1 + l2 + l3 + 1);
+	if (!result)
 		return (NULL);
-	for (i = 0; next_token[i] != '\0'; i++)
+
+	for (i = 0; name[i]; i++)
+		result[i] = name[i];
+	k = i;
+
+	for (i = 0; sep[i]; i++)
+		result[k + i] = sep[i];
+	k = k + i;
+
+	for (i = 0; value[i]; i++)
+		result[k + i] = value[i];
+	k = k + i;
+
+	result[k] = '\0';
+
+	return (result);
+}
+
+/**
+ * _strlen - it gives the length of a string
+ * @s: pointer to the string
+ * Return: the length of string
+ */
+int _strlen(char *s)
+{
+	int i = 0;
+
+	while (*(s + i) != '\0')
 	{
-		if (check_match(next_token[i], delim) == 0)
-			break;
+		i++;
 	}
-	if (next_token[i] == '\0' || next_token[i] == '#')
+	return (i);
+}
+
+/**
+ * _putchar - writes the character c to stdout
+ * @c: The character to print
+ *
+ * Return: On success 1.
+ * On error, -1 is returned, and errno is set appropriately.
+ */
+int _putchar(char c)
+{
+	return (write(1, &c, 1));
+}
+
+/**
+ * _puts - prints a string
+ * @str: pointer to string
+ */
+
+void _puts(char *str)
+{
+	int i = 0;
+
+	while (str[i])
 	{
-		next_token = NULL;
-		return (NULL);
+		_putchar(str[i]);
+		i++;
 	}
-	token_start = next_token + i;
-	next_token = token_start;
-	for (i = 0; next_token[i] != '\0'; i++)
-	{
-		if (check_match(next_token[i], delim) == 1)
-			break;
-	}
-	if (next_token[i] == '\0')
-		next_token = NULL;
-	else
-	{
-		next_token[i] = '\0';
-		next_token = next_token + i + 1;
-		if (*next_token == '\0')
-			next_token = NULL;
-	}
-	return (token_start);
 }

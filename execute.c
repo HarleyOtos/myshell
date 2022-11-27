@@ -1,176 +1,136 @@
 #include "main.h"
 
 /**
- * path_execute - executes a command in the path
- * @command: full path to the command
- * @vars: pointer to struct of variables
- *
- * Return: 0 on success, 1 on failure
+ * splitstring - splits a string and makes it an array of pointers to words
+ * @str: the string to be split
+ * @delim: the delimiter
+ * Return: array of pointers to words
  */
-int path_execute(char *command, vars_t *vars)
-{
-	pid_t child_pid;
 
-	if (access(command, X_OK) == 0)
+char **splitstring(char *str, const char *delim)
+{
+	int i, wn;
+	char **array;
+	char *token;
+	char *copy;
+
+	copy = malloc(_strlen(str) + 1);
+	if (copy == NULL)
 	{
-		child_pid = fork();
-		if (child_pid == -1)
-			print_error(vars, NULL);
-		if (child_pid == 0)
-		{
-			if (execve(command, vars->av, vars->env) == -1)
-				print_error(vars, NULL);
-		}
-		else
-		{
-			wait(&vars->status);
-			if (WIFEXITED(vars->status))
-				vars->status = WEXITSTATUS(vars->status);
-			else if (WIFSIGNALED(vars->status) && WTERMSIG(vars->status) == SIGINT)
-				vars->status = 130;
-			return (0);
-		}
-		vars->status = 127;
-		return (1);
+		perror(_getenv("_"));
+		return (NULL);
 	}
-	else
+	i = 0;
+	while (str[i])
 	{
-		print_error(vars, ": Permission denied\n");
-		vars->status = 126;
+		copy[i] = str[i];
+		i++;
 	}
-	return (0);
+	copy[i] = '\0';
+
+	token = strtok(copy, delim);
+	array = malloc((sizeof(char *) * 2));
+	array[0] = _strdup(token);
+
+	i = 1;
+	wn = 3;
+	while (token)
+	{
+		token = strtok(NULL, delim);
+		array = _realloc(array, (sizeof(char *) * (wn - 1)), (sizeof(char *) * wn));
+		array[i] = _strdup(token);
+		i++;
+		wn++;
+	}
+	free(copy);
+	return (array);
 }
 
 /**
- * find_path - finds the PATH variable
- * @env: array of environment variables
- *
- * Return: pointer to the node that contains the PATH, or NULL on failure
+ * execute - executes a command
+ * @argv: array of arguments
  */
-char *find_path(char **env)
-{
-	char *path = "PATH=";
-	unsigned int i, j;
 
-	for (i = 0; env[i] != NULL; i++)
-	{
-		for (j = 0; j < 5; j++)
-			if (path[j] != env[i][j])
-				break;
-		if (j == 5)
-			break;
-	}
-	return (env[i]);
-}
-/**
- * check_for_path - checks if the command is in the PATH
- * @vars: variables
- *
- * Return: void
- */
-void check_for_path(vars_t *vars)
+void execute(char **argv)
 {
-	char *path, *path_dup = NULL, *check = NULL;
-	unsigned int i = 0, r = 0;
-	char **path_tokens;
-	struct stat buf;
 
-	if (check_for_dir(vars->av[0]))
-		r = execute_cwd(vars);
-	else
-	{
-		path = find_path(vars->env);
-		if (path != NULL)
-		{
-			path_dup = _strdup(path + 5);
-			path_tokens = tokenize(path_dup, ":");
-			for (i = 0; path_tokens && path_tokens[i]; i++, free(check))
-			{
-				check = _strcat(path_tokens[i], vars->av[0]);
-				if (stat(check, &buf) == 0)
-				{
-					r = path_execute(check, vars);
-					free(check);
-					break;
-				}
-			}
-			free(path_dup);
-			if (path_tokens == NULL)
-			{
-				vars->status = 127;
-				new_exit(vars);
-			}
-		}
-		if (path == NULL || path_tokens[i] == NULL)
-		{
-			print_error(vars, ": not found\n");
-			vars->status = 127;
-		}
-		free(path_tokens);
-	}
-	if (r == 1)
-		new_exit(vars);
-}
-/**
- * execute_cwd - executes the command in the current working directory
- * @vars: pointer to struct of variables
- *
- * Return: 0 on success, 1 on failure
- */
-int execute_cwd(vars_t *vars)
-{
-	pid_t child_pid;
-	struct stat buf;
+	int d, status;
 
-	if (stat(vars->av[0], &buf) == 0)
+	if (!argv || !argv[0])
+		return;
+	d = fork();
+	if (d == -1)
 	{
-		if (access(vars->av[0], X_OK) == 0)
-		{
-			child_pid = fork();
-			if (child_pid == -1)
-				print_error(vars, NULL);
-			if (child_pid == 0)
-			{
-				if (execve(vars->av[0], vars->av, vars->env) == -1)
-					print_error(vars, NULL);
-			}
-			else
-			{
-				wait(&vars->status);
-				if (WIFEXITED(vars->status))
-					vars->status = WEXITSTATUS(vars->status);
-				else if (WIFSIGNALED(vars->status) && WTERMSIG(vars->status) == SIGINT)
-					vars->status = 130;
-				return (0);
-			}
-			vars->status = 127;
-			return (1);
-		}
-		else
-		{
-			print_error(vars, ": Permission denied\n");
-			vars->status = 126;
-		}
-		return (0);
+		perror(_getenv("_"));
 	}
-	print_error(vars, ": not found\n");
-	vars->status = 127;
-	return (0);
+	if (d == 0)
+	{
+		execve(argv[0], argv, environ);
+			perror(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	wait(&status);
 }
+
 /**
- * check_for_dir - checks if the command is a part of a path
- * @str: command
- *
- * Return: 1 on success, 0 on failure
+ * _realloc - Reallocates memory block
+ * @ptr: previous pointer
+ * @old_size: old size of previous pointer
+ * @new_size: new size for our pointer
+ * Return: New resized Pointer
  */
-int check_for_dir(char *str)
+
+void *_realloc(void *ptr, unsigned int old_size, unsigned int new_size)
 {
+	char *new;
+	char *old;
+
 	unsigned int i;
 
-	for (i = 0; str[i]; i++)
+	if (ptr == NULL)
+		return (malloc(new_size));
+
+	if (new_size == old_size)
+		return (ptr);
+
+	if (new_size == 0 && ptr != NULL)
 	{
-		if (str[i] == '/')
-			return (1);
+		free(ptr);
+		return (NULL);
 	}
-	return (0);
+
+	new = malloc(new_size);
+	old = ptr;
+	if (new == NULL)
+		return (NULL);
+
+	if (new_size > old_size)
+	{
+		for (i = 0; i < old_size; i++)
+			new[i] = old[i];
+		free(ptr);
+		for (i = old_size; i < new_size; i++)
+			new[i] = '\0';
+	}
+	if (new_size < old_size)
+	{
+		for (i = 0; i < new_size; i++)
+			new[i] = old[i];
+		free(ptr);
+	}
+	return (new);
+}
+
+/**
+ * freearv - frees the array of pointers arv
+ *@arv: array of pointers
+ */
+
+void freearv(char **arv)
+{
+	int i;
+
+	for (i = 0; arv[i]; i++)
+		free(arv[i]);
+	free(arv);
 }
